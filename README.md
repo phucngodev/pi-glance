@@ -1,27 +1,35 @@
 <div align="center">
 
-<br/>
-
 # ◌ pi-glance
 
 **A calm input surface for [pi](https://github.com/badlogic/pi-mono)**
 
-<br/>
+Replace the default prompt with a rounded multiline editor
+and an inline glance at model, context, tokens, cost, and branch.
 
-A rounded multiline editor with an inline glance at model, context, tokens, cost, and branch.
-
-<br/>
-
+[![npm](https://img.shields.io/npm/v/pi-glance?style=flat-square&color=blue)](https://www.npmjs.com/package/pi-glance)
 [![license](https://img.shields.io/badge/license-MIT-64748b?style=flat-square)](LICENSE)
-[![pi package](https://img.shields.io/badge/pi-package-7c3aed?style=flat-square)](https://github.com/badlogic/pi-mono)
-
-<br/>
+[![pi](https://img.shields.io/badge/pi-package-7c3aed?style=flat-square)](https://github.com/badlogic/pi-mono)
 
 </div>
 
 ---
 
-> Demo GIF coming soon.
+## Install
+
+```bash
+pi install npm:pi-glance
+```
+
+## Use
+
+```text
+/glance
+```
+
+That's the only command — opens a configuration pane to tweak theme, icons, segments, and more.
+
+## What you see
 
 ```text
 ╭─ pi-glance ──────────────── 󰚩 Sonnet 4 high · 󰔟 23% · 󰄨 ↑12.4k ↓3.1k ·  main ─╮
@@ -32,32 +40,21 @@ A rounded multiline editor with an inline glance at model, context, tokens, cost
 ╰───────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
----
+| | | |
+|---|---|---|
+| 🖊️ | **Rounded editor** | Configurable 2 / 3 / 4 min rows, preserves all pi defaults |
+| 🏷️ | **Project title** | Current folder name on the top-left border |
+| 📊 | **Inline status** | Model · context · tokens · cost · git branch — top-right |
+| ⚙️ | **`/glance` pane** | Theme, icons, segments, visibility — Save / Cancel |
+| 💤 | **Dim unfocused** | Surface quiets down when you scroll the chat |
+| 🎨 | **Two themes** | `light` and `dark` with tuned grey-green borders |
 
-### Install
+## Design
 
-```bash
-pi install npm:pi-glance
-```
+- No pi core patches — public extension APIs only
+- No render-time IO — no shell, file, or network calls during rendering
+- Global config at `~/.pi/agent/pi-glance/config.json`
 
-### Configure
+## License
 
-```text
-/glance
-```
-
-That's the only command.
-
-### What you get
-
-| | |
-|---|---|
-| Rounded editor | Multiline input with configurable 2 / 3 / 4 min rows |
-| Project title | Current folder name on the top-left border |
-| Inline status | Model · context · tokens · cost · git branch — top-right |
-| `/glance` pane | Theme · icons · segments · visibility — Save / Cancel |
-| Dim unfocused | Entire surface quiets down when you scroll the chat |
-
----
-
-<div align="center"><sub>Made with restraint · No core patches · No render-time IO</sub></div>
+[MIT](LICENSE) © 2026 linys77
