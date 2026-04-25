@@ -1,0 +1,48 @@
+{
+  "name": "pi-glance",
+  "version": "0.1.0",
+  "description": "A polished input surface extension for pi, with a rounded multiline editor and inline model/context/status glance.",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "extension",
+    "input-surface",
+    "statusline",
+    "terminal",
+    "tui"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "author": "linys77",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LinYS77/pi-glance.git"
+  },
+  "homepage": "https://github.com/LinYS77/pi-glance#readme",
+  "bugs": {
+    "url": "https://github.com/LinYS77/pi-glance/issues"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "pack:dry": "npm pack --dry-run"
+  }
+}
