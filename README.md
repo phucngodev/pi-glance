@@ -6,9 +6,8 @@
 
 A rounded multiline editor with a quiet inline glance for model, context, tokens, cost, and git branch.
 
-[![npm](https://img.shields.io/npm/v/pi-glance?style=flat-square&color=blue)](https://www.npmjs.com/package/pi-glance)
-[![license](https://img.shields.io/npm/l/pi-glance?style=flat-square)](https://github.com/LinYS77/pi-glance/blob/main/LICENSE)
-[![pi package](https://img.shields.io/badge/pi-package-blueviolet?style=flat-square)](https://github.com/badlogic/pi-mono)
+[![license](https://img.shields.io/badge/license-MIT-64748b?style=flat-square)](LICENSE)
+[![pi package](https://img.shields.io/badge/pi-package-7c3aed?style=flat-square)](https://github.com/badlogic/pi-mono)
 
 </div>
 
