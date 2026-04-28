@@ -39,7 +39,7 @@ export const PALETTES: Record<GlanceThemeName, GlancePalette> = {
 
 export const ICONS: Record<IconMode, IconSet> = {
 	nerd: {
-		git: "",
+		git: "",
 		model: "󰚩",
 		context: "󰔟",
 		tokens: "󰄨",
