@@ -25,6 +25,30 @@ function renderCollectedSegment(ctx: SegmentRenderContext, segment: SegmentDefin
 	};
 }
 
+function gitBranchLabel(ctx: SegmentRenderContext): string {
+	const git = ctx.state.git;
+	return git.branch || (git.detached && git.sha ? git.sha : "HEAD");
+}
+
+function gitStatusMark(ctx: SegmentRenderContext): string {
+	const status = ctx.state.git.status;
+	if (status === "conflict") return ctx.config.icons === "nerd" ? "⚠" : "!";
+	if (status === "dirty") return ctx.config.icons === "nerd" ? "●" : "*";
+	return "";
+}
+
+function gitDetailParts(ctx: SegmentRenderContext): string[] {
+	const git = ctx.state.git;
+	const parts: string[] = [];
+	const status = gitStatusMark(ctx);
+	if (ctx.config.git.showDirty && status) parts.push(status);
+	if (ctx.config.git.showAheadBehind) {
+		if (git.ahead > 0) parts.push(`↑${git.ahead}`);
+		if (git.behind > 0) parts.push(`↓${git.behind}`);
+	}
+	return parts;
+}
+
 const SEGMENTS: SegmentDefinition[] = [
 	{
 		id: "git",
@@ -33,24 +57,16 @@ const SEGMENTS: SegmentDefinition[] = [
 		collect(ctx) {
 			const git = ctx.state.git;
 			if (!git.repo) return undefined;
-			const branch = git.branch || (git.detached && git.sha ? git.sha : "HEAD");
-			const status = ctx.config.icons === "nerd" ? (git.status === "conflict" ? "⚠" : git.status === "dirty" ? "●" : "") : git.status === "conflict" ? "!" : git.status === "dirty" ? "*" : "";
-			const parts = [];
-			if (ctx.config.git.showDirty && status) parts.push(status);
-			if (ctx.config.git.showAheadBehind) {
-				if (git.ahead > 0) parts.push(`↑${git.ahead}`);
-				if (git.behind > 0) parts.push(`↓${git.behind}`);
-			}
-			const showSha = ctx.config.git.showSha === "always" || (ctx.config.git.showSha === "auto" && ctx.widthMode === "full");
-			if (showSha && git.sha) parts.push(git.sha);
+			const branch = gitBranchLabel(ctx);
+			const parts = gitDetailParts(ctx);
 			const secondary = parts.join(" ") || undefined;
 			return {
 				primary: branch,
 				secondary,
 				display: {
 					full: [branch, secondary].filter(Boolean).join(" "),
-					compact: [branch, ...parts.filter((part) => part !== git.sha)].join(" "),
-					minimal: [branch, status].filter(Boolean).join(" "),
+					compact: [branch, secondary].filter(Boolean).join(" "),
+					minimal: [branch, gitStatusMark(ctx)].filter(Boolean).join(" "),
 				},
 				metadata: {
 					repo: true,

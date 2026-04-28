@@ -2,10 +2,28 @@ import { execFile } from "node:child_process";
 import type { GitConfig, GitSnapshot, GitStatus } from "./types.js";
 
 const GIT_ARGS = ["--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash"] as const;
-const MAX_POLL_INTERVAL_MS = 5000;
-const MIN_POLL_INTERVAL_MS = 2000;
+const GIT_MAX_BUFFER = 512 * 1024;
+const DEFAULT_POLL_INTERVAL_MS = 5000;
+const MIN_POLL_INTERVAL_MS = 1000;
+const NO_REPO_RETRY_MS = 30_000;
 
-export function emptyGitSnapshot(status: GitStatus = "unknown"): GitSnapshot {
+interface GitCounts {
+	staged: number;
+	unstaged: number;
+	untracked: number;
+	conflicts: number;
+}
+
+interface BranchInfo {
+	branch: string | null;
+	detached: boolean;
+	sha: string | null;
+	upstream: string | null;
+	ahead: number;
+	behind: number;
+}
+
+export function emptyGitSnapshot(status: GitStatus = "unknown", now = Date.now()): GitSnapshot {
 	return {
 		repo: false,
 		branch: null,
@@ -20,7 +38,7 @@ export function emptyGitSnapshot(status: GitStatus = "unknown"): GitSnapshot {
 		conflicts: 0,
 		dirty: false,
 		status,
-		updatedAt: Date.now(),
+		updatedAt: now,
 	};
 }
 
@@ -29,83 +47,93 @@ function shortSha(oid: string | null): string | null {
 	return oid.slice(0, 7);
 }
 
-function countStatusPair(pair: string, counts: { staged: number; unstaged: number }): void {
-	const staged = pair[0];
-	const unstaged = pair[1];
-	if (staged && staged !== ".") counts.staged++;
-	if (unstaged && unstaged !== ".") counts.unstaged++;
+function isChangedStatus(status: string | undefined): boolean {
+	return !!status && status !== ".";
+}
+
+function addStatusPair(pair: string, counts: GitCounts): void {
+	if (isChangedStatus(pair[0])) counts.staged++;
+	if (isChangedStatus(pair[1])) counts.unstaged++;
+}
+
+function emptyBranchInfo(): BranchInfo {
+	return {
+		branch: null,
+		detached: false,
+		sha: null,
+		upstream: null,
+		ahead: 0,
+		behind: 0,
+	};
+}
+
+function parseBranchHeader(line: string, info: BranchInfo): void {
+	if (line.startsWith("# branch.oid ")) {
+		info.sha = shortSha(line.slice("# branch.oid ".length).trim());
+		return;
+	}
+	if (line.startsWith("# branch.head ")) {
+		const head = line.slice("# branch.head ".length).trim();
+		info.detached = head === "(detached)";
+		info.branch = info.detached ? null : head;
+		return;
+	}
+	if (line.startsWith("# branch.upstream ")) {
+		info.upstream = line.slice("# branch.upstream ".length).trim() || null;
+		return;
+	}
+	if (line.startsWith("# branch.ab ")) {
+		const match = line.match(/\+([0-9]+)\s+-([0-9]+)/);
+		if (!match) return;
+		info.ahead = Number.parseInt(match[1]!, 10);
+		info.behind = Number.parseInt(match[2]!, 10);
+	}
+}
+
+function parseStatusRecord(line: string, counts: GitCounts): void {
+	if (line.startsWith("1 ") || line.startsWith("2 ")) {
+		addStatusPair(line.slice(2, 4), counts);
+		return;
+	}
+	if (line.startsWith("? ")) {
+		counts.untracked++;
+		return;
+	}
+	if (line.startsWith("u ")) {
+		counts.conflicts++;
+	}
+}
+
+function snapshotStatus(counts: GitCounts): GitStatus {
+	if (counts.conflicts > 0) return "conflict";
+	if (counts.staged > 0 || counts.unstaged > 0 || counts.untracked > 0) return "dirty";
+	return "clean";
 }
 
 function parseGitStatus(output: string, now = Date.now()): GitSnapshot {
-	let branch: string | null = null;
-	let detached = false;
-	let oid: string | null = null;
-	let upstream: string | null = null;
-	let ahead = 0;
-	let behind = 0;
-	let staged = 0;
-	let unstaged = 0;
-	let untracked = 0;
-	let conflicts = 0;
+	const branch = emptyBranchInfo();
+	const counts: GitCounts = { staged: 0, unstaged: 0, untracked: 0, conflicts: 0 };
 
 	for (const line of output.split(/\r?\n/)) {
 		if (!line) continue;
-		if (line.startsWith("# branch.oid ")) {
-			oid = line.slice("# branch.oid ".length).trim();
-			continue;
-		}
-		if (line.startsWith("# branch.head ")) {
-			const head = line.slice("# branch.head ".length).trim();
-			detached = head === "(detached)";
-			branch = detached ? null : head;
-			continue;
-		}
-		if (line.startsWith("# branch.upstream ")) {
-			upstream = line.slice("# branch.upstream ".length).trim() || null;
-			continue;
-		}
-		if (line.startsWith("# branch.ab ")) {
-			const match = line.match(/\+([0-9]+)\s+-([0-9]+)/);
-			if (match) {
-				ahead = Number.parseInt(match[1]!, 10);
-				behind = Number.parseInt(match[2]!, 10);
-			}
-			continue;
-		}
-		if (line.startsWith("1 ") || line.startsWith("2 ")) {
-			const pair = line.slice(2).split(" ", 1)[0] ?? "..";
-			const counts = { staged, unstaged };
-			countStatusPair(pair, counts);
-			staged = counts.staged;
-			unstaged = counts.unstaged;
-			continue;
-		}
-		if (line.startsWith("? ")) {
-			untracked++;
-			continue;
-		}
-		if (line.startsWith("u ")) {
-			conflicts++;
-		}
+		if (line.startsWith("# ")) parseBranchHeader(line, branch);
+		else parseStatusRecord(line, counts);
 	}
 
-	const sha = shortSha(oid);
-	const dirty = staged > 0 || unstaged > 0 || untracked > 0 || conflicts > 0;
-	const status: GitStatus = conflicts > 0 ? "conflict" : dirty ? "dirty" : "clean";
-
+	const status = snapshotStatus(counts);
 	return {
 		repo: true,
-		branch,
-		detached,
-		sha,
-		upstream,
-		ahead,
-		behind,
-		staged,
-		unstaged,
-		untracked,
-		conflicts,
-		dirty,
+		branch: branch.branch,
+		detached: branch.detached,
+		sha: branch.sha,
+		upstream: branch.upstream,
+		ahead: branch.ahead,
+		behind: branch.behind,
+		staged: counts.staged,
+		unstaged: counts.unstaged,
+		untracked: counts.untracked,
+		conflicts: counts.conflicts,
+		dirty: status !== "clean",
 		status,
 		updatedAt: now,
 	};
@@ -113,19 +141,19 @@ function parseGitStatus(output: string, now = Date.now()): GitSnapshot {
 
 function collectGitSnapshot(cwd: string, config: GitConfig): Promise<GitSnapshot> {
 	return new Promise((resolve) => {
-		execFile("git", [...GIT_ARGS], { cwd, timeout: config.timeoutMs, maxBuffer: 512 * 1024 }, (error, stdout) => {
-			if (error) {
-				resolve(emptyGitSnapshot("unknown"));
-				return;
-			}
-			resolve(parseGitStatus(stdout));
+		execFile("git", [...GIT_ARGS], { cwd, timeout: config.timeoutMs, maxBuffer: GIT_MAX_BUFFER }, (error, stdout) => {
+			resolve(error ? emptyGitSnapshot("unknown") : parseGitStatus(stdout));
 		});
 	});
 }
 
+function pollInterval(snapshot: GitSnapshot, config: GitConfig): number {
+	if (!snapshot.repo) return NO_REPO_RETRY_MS;
+	return Math.max(MIN_POLL_INTERVAL_MS, config.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS);
+}
+
 export class GitRefresher {
 	private timer: NodeJS.Timeout | undefined;
-	private pollTimer: NodeJS.Timeout | undefined;
 	private inFlight = false;
 	private pending = false;
 	private disposed = false;
@@ -138,34 +166,26 @@ export class GitRefresher {
 
 	dispose(): void {
 		this.disposed = true;
-		if (this.timer) clearTimeout(this.timer);
-		if (this.pollTimer) clearTimeout(this.pollTimer);
-		this.timer = undefined;
-		this.pollTimer = undefined;
+		this.clearTimer();
 	}
 
 	schedule(immediate = false): void {
 		if (this.disposed) return;
+		this.scheduleAfter(immediate ? 0 : this.getConfig().refreshDebounceMs);
+	}
+
+	private clearTimer(): void {
 		if (this.timer) clearTimeout(this.timer);
-		if (this.pollTimer) clearTimeout(this.pollTimer);
-		this.pollTimer = undefined;
-		const delay = immediate ? 0 : this.getConfig().refreshDebounceMs;
+		this.timer = undefined;
+	}
+
+	private scheduleAfter(delay: number): void {
+		this.clearTimer();
 		this.timer = setTimeout(() => {
 			this.timer = undefined;
 			void this.refresh();
 		}, delay);
 		this.timer.unref?.();
-	}
-
-	private schedulePoll(snapshot: GitSnapshot): void {
-		if (this.disposed || !snapshot.repo) return;
-		if (this.pollTimer) clearTimeout(this.pollTimer);
-		const delay = Math.max(MIN_POLL_INTERVAL_MS, Math.min(this.getConfig().snapshotTtlMs, MAX_POLL_INTERVAL_MS));
-		this.pollTimer = setTimeout(() => {
-			this.pollTimer = undefined;
-			void this.refresh();
-		}, delay);
-		this.pollTimer.unref?.();
 	}
 
 	private async refresh(): Promise<void> {
@@ -174,20 +194,23 @@ export class GitRefresher {
 			this.pending = true;
 			return;
 		}
+
 		const cwd = this.getCwd();
 		if (!cwd) return;
-		let snapshot: GitSnapshot | undefined;
+
 		this.inFlight = true;
+		let snapshot: GitSnapshot | undefined;
 		try {
 			snapshot = await collectGitSnapshot(cwd, this.getConfig());
 			if (!this.disposed) this.onSnapshot(cwd, snapshot);
 		} finally {
 			this.inFlight = false;
-			if (this.pending && !this.disposed) {
+			if (this.disposed) return;
+			if (this.pending) {
 				this.pending = false;
-				this.schedule(true);
-			} else if (snapshot && !this.disposed) {
-				this.schedulePoll(snapshot);
+				this.scheduleAfter(0);
+			} else if (snapshot) {
+				this.scheduleAfter(pollInterval(snapshot, this.getConfig()));
 			}
 		}
 	}

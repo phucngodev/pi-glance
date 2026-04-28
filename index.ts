@@ -106,7 +106,7 @@ export default function piGlance(pi: ExtensionAPI): void {
 		clearBridge();
 		ctx.ui.setFooter((tui, _theme, footerData) => {
 			requestRender = () => tui.requestRender();
-			footerBridge = new GlanceFooterBridge(tui, () => state ?? ensureState(ctx), footerData);
+			footerBridge = new GlanceFooterBridge(() => state ?? ensureState(ctx), footerData);
 			return footerBridge;
 		});
 

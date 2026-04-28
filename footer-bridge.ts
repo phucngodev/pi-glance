@@ -1,10 +1,9 @@
 import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
-import type { Component, TUI } from "@mariozechner/pi-tui";
+import type { Component } from "@mariozechner/pi-tui";
 import type { GlanceState } from "./types.js";
 
 export class GlanceFooterBridge implements Component {
 	constructor(
-		private readonly tui: TUI,
 		private readonly getState: () => GlanceState,
 		private readonly footerData: ReadonlyFooterDataProvider,
 	) {

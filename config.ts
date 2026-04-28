@@ -41,10 +41,9 @@ export function defaultConfig(): GlanceConfig {
 		git: {
 			showDirty: true,
 			showAheadBehind: true,
-			showSha: "never",
 			timeoutMs: 1000,
 			refreshDebounceMs: 1500,
-			snapshotTtlMs: 30_000,
+			pollIntervalMs: 5000,
 		},
 	};
 }
@@ -71,10 +70,6 @@ function parseStringEnum<T extends string>(value: unknown, allowed: Set<T>, fall
 function parseIntInRange(value: unknown, fallback: number, min: number, max: number): number {
 	if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
 	return Math.max(min, Math.min(max, Math.floor(value)));
-}
-
-function parseFiniteNumber(value: unknown, fallback: number): number {
-	return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function parseIntAtLeast(value: unknown, fallback: number, min: number): number {
@@ -104,7 +99,7 @@ function normalizeSegments(value: unknown): SegmentConfig[] {
 			const segment = {
 				id,
 				enabled: parseBool(record.enabled, base.enabled),
-				priority: parseFiniteNumber(record.priority, base.priority),
+				priority: base.priority,
 			};
 			byId.set(id, segment);
 			if (!ordered.some((s) => s.id === id)) ordered.push(segment);
@@ -155,10 +150,9 @@ function normalizeConfig(raw: unknown): GlanceConfig {
 		git: {
 			showDirty: parseBool(git.showDirty, defaults.git.showDirty),
 			showAheadBehind: parseBool(git.showAheadBehind, defaults.git.showAheadBehind),
-			showSha: defaults.git.showSha,
 			timeoutMs: parseIntAtLeast(git.timeoutMs, defaults.git.timeoutMs, 100),
 			refreshDebounceMs: parseIntAtLeast(git.refreshDebounceMs, defaults.git.refreshDebounceMs, 0),
-			snapshotTtlMs: parseIntAtLeast(git.snapshotTtlMs, defaults.git.snapshotTtlMs, 1000),
+			pollIntervalMs: parseIntAtLeast(git.pollIntervalMs, defaults.git.pollIntervalMs, 1000),
 		},
 	};
 }
