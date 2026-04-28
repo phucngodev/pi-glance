@@ -5,7 +5,7 @@
 **A calm input surface for [pi](https://github.com/badlogic/pi-mono)**
 
 Replace the default prompt with a rounded multiline editor
-and an inline glance at model, context, tokens, cost, and branch.
+and an inline glance at model, context, tokens, cost, and Git.
 
 [![npm](https://img.shields.io/npm/v/pi-glance?style=flat-square&color=blue)](https://www.npmjs.com/package/pi-glance)
 [![license](https://img.shields.io/badge/license-MIT-64748b?style=flat-square)](LICENSE)
@@ -55,7 +55,7 @@ That's the only command — opens a configuration pane to tweak theme, icons, se
 |---|---|---|
 | 🖊️ | **Rounded editor** | Configurable 2 / 3 / 4 min rows, preserves all pi defaults |
 | 🏷️ | **Project title** | Current folder name on the top-left border |
-| 📊 | **Inline status** | Model · context · tokens · cost · git branch — top-right |
+| 📊 | **Inline status** | Model · context · tokens · cost · Git status — top-right |
 | ⚙️ | **`/glance` pane** | Theme, icons, segments, visibility — Save / Cancel |
 | 💤 | **Dim unfocused** | Surface quiets down when you scroll the chat |
 | 🎨 | **Two themes** | `light` and `dark` with tuned grey-green borders |
@@ -68,7 +68,7 @@ That's the only command — opens a configuration pane to tweak theme, icons, se
 ## Design
 
 - No pi core patches — public extension APIs only
-- No render-time IO — no shell, file, or network calls during rendering
+- No render-time IO — Git is collected asynchronously and cached
 - Global config at `~/.pi/agent/pi-glance/config.json`
 
 ## License

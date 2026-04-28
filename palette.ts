@@ -11,7 +11,7 @@ export const PALETTES: Record<GlanceThemeName, GlancePalette> = {
 		border: { r: 72, g: 94, b: 84 },
 		title: { r: 47, g: 104, b: 74 },
 		segments: {
-			"git.branch": { fg: { r: 35, g: 118, b: 85 } },
+			git: { fg: { r: 35, g: 118, b: 85 } },
 			model: { fg: { r: 15, g: 23, b: 42 } },
 			context: { fg: { r: 5, g: 150, b: 105 } },
 			tokens: { fg: { r: 100, g: 116, b: 139 } },
@@ -28,7 +28,7 @@ export const PALETTES: Record<GlanceThemeName, GlancePalette> = {
 		border: { r: 104, g: 132, b: 119 },
 		title: { r: 104, g: 152, b: 129 },
 		segments: {
-			"git.branch": { fg: { r: 94, g: 188, b: 145 } },
+			git: { fg: { r: 94, g: 188, b: 145 } },
 			model: { fg: { r: 229, g: 231, b: 235 } },
 			context: { fg: { r: 52, g: 211, b: 153 } },
 			tokens: { fg: { r: 156, g: 163, b: 175 } },
@@ -39,14 +39,14 @@ export const PALETTES: Record<GlanceThemeName, GlancePalette> = {
 
 export const ICONS: Record<IconMode, IconSet> = {
 	nerd: {
-		"git.branch": "",
+		git: "",
 		model: "󰚩",
 		context: "󰔟",
 		tokens: "󰄨",
 		cost: "󰈸",
 	},
 	plain: {
-		"git.branch": "git",
+		git: "git",
 		model: "ai",
 		context: "ctx",
 		tokens: "tok",

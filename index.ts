@@ -2,6 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { loadConfig, saveConfig } from "./config.js";
 import { GlanceEditor } from "./editor.js";
 import { GlanceFooterBridge } from "./footer-bridge.js";
+import { GitRefresher } from "./git.js";
 import { showGlancePane } from "./pane.js";
 import {
 	clearContextUsage,
@@ -10,6 +11,7 @@ import {
 	refreshContextUsage,
 	refreshModel,
 	refreshWorkspace,
+	setGitSnapshot,
 	setUsageTotals,
 } from "./state.js";
 import type { GlanceConfig, GlanceState } from "./types.js";
@@ -18,6 +20,7 @@ export default function piGlance(pi: ExtensionAPI): void {
 	let config: GlanceConfig | undefined;
 	let state: GlanceState | undefined;
 	let footerBridge: GlanceFooterBridge | undefined;
+	let gitRefresher: GitRefresher | undefined;
 	let requestRender: (() => void) | undefined;
 
 	async function ensureConfig(): Promise<GlanceConfig> {
@@ -42,12 +45,28 @@ export default function piGlance(pi: ExtensionAPI): void {
 		requestRender?.();
 	}
 
-	function refreshReliableSnapshot(ctx: ExtensionContext, options: { model?: boolean } = {}): void {
+	function ensureGitRefresher(): GitRefresher {
+		gitRefresher ??= new GitRefresher(
+			() => getConfig().git,
+			() => state?.workspace.path,
+			(cwd, snapshot) => {
+				if (state && setGitSnapshot(state, cwd, snapshot)) renderNow();
+			},
+		);
+		return gitRefresher;
+	}
+
+	function scheduleGitRefresh(immediate = false): void {
+		gitRefresher?.schedule(immediate);
+	}
+
+	function refreshReliableSnapshot(ctx: ExtensionContext, options: { model?: boolean; git?: boolean } = {}): void {
 		if (!state) return;
-		refreshWorkspace(state, ctx);
+		const workspaceChanged = refreshWorkspace(state, ctx);
 		if (options.model) refreshModel(state, ctx, getConfig(), pi.getThinkingLevel());
 		setUsageTotals(state, computeUsageTotals(ctx));
 		refreshContextUsage(state, ctx);
+		if (options.git || workspaceChanged) scheduleGitRefresh(options.git || workspaceChanged);
 	}
 
 	function refreshThinkingLevel(ctx: ExtensionContext): void {
@@ -60,9 +79,15 @@ export default function piGlance(pi: ExtensionAPI): void {
 		footerBridge = undefined;
 	}
 
+	function clearGitRefresher(): void {
+		gitRefresher?.dispose();
+		gitRefresher = undefined;
+	}
+
 	function clearUI(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
 		clearBridge();
+		clearGitRefresher();
 		ctx.ui.setEditorComponent(undefined);
 		ctx.ui.setFooter(undefined);
 		requestRender = undefined;
@@ -77,6 +102,7 @@ export default function piGlance(pi: ExtensionAPI): void {
 			return;
 		}
 
+		ensureGitRefresher().schedule(true);
 		clearBridge();
 		ctx.ui.setFooter((tui, _theme, footerData) => {
 			requestRender = () => tui.requestRender();
@@ -114,7 +140,7 @@ export default function piGlance(pi: ExtensionAPI): void {
 			config = result.config;
 			await saveConfig(config);
 			if (state) {
-				refreshReliableSnapshot(ctx, { model: true });
+				refreshReliableSnapshot(ctx, { model: true, git: true });
 			}
 			installInputSurface(ctx);
 			renderNow();
@@ -135,7 +161,7 @@ export default function piGlance(pi: ExtensionAPI): void {
 	pi.on("model_select", async (_event, ctx) => {
 		await ensureConfig();
 		ensureState(ctx);
-		refreshReliableSnapshot(ctx, { model: true });
+		refreshReliableSnapshot(ctx, { model: true, git: true });
 		renderNow();
 	});
 
@@ -149,14 +175,14 @@ export default function piGlance(pi: ExtensionAPI): void {
 	pi.on("tool_execution_end", async (_event, ctx) => {
 		await ensureConfig();
 		ensureState(ctx);
-		refreshReliableSnapshot(ctx);
+		refreshReliableSnapshot(ctx, { git: true });
 		renderNow();
 	});
 
 	pi.on("session_tree", async (_event, ctx) => {
 		await ensureConfig();
 		ensureState(ctx);
-		refreshReliableSnapshot(ctx, { model: true });
+		refreshReliableSnapshot(ctx, { model: true, git: true });
 		renderNow();
 	});
 
@@ -167,6 +193,7 @@ export default function piGlance(pi: ExtensionAPI): void {
 		refreshModel(state!, ctx, getConfig(), pi.getThinkingLevel());
 		setUsageTotals(state!, computeUsageTotals(ctx));
 		clearContextUsage(state!, ctx);
+		scheduleGitRefresh(true);
 		renderNow();
 	});
 

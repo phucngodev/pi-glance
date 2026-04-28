@@ -123,7 +123,22 @@ function padPlain(text: string, width: number): string {
 export function renderInputSurfacePreview(config: GlanceConfig, width: number, options: InputSurfaceRenderOptions = {}): string[] {
 	const state: GlanceState = {
 		workspace: { name: "pi-glance", path: "/Users/winnie/projects/pi-glance" },
-		git: { branch: "main" },
+		git: {
+			repo: true,
+			branch: "main",
+			detached: false,
+			sha: "a1b2c3d",
+			upstream: "origin/main",
+			ahead: 2,
+			behind: 1,
+			staged: 1,
+			unstaged: 1,
+			untracked: 0,
+			conflicts: 0,
+			dirty: true,
+			status: "dirty",
+			updatedAt: Date.now(),
+		},
 		providers: { availableCount: 2 },
 		model: { id: "claude-sonnet-4-20250514", provider: "anthropic", displayName: "Sonnet 4", thinking: "high" },
 		context: { tokens: 46_800, window: 200_000, percent: 23.4 },

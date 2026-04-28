@@ -1,4 +1,4 @@
-import { formatCost, formatPercent, formatTokens, stripControls } from "./format.js";
+import { formatCost, formatPercent, formatTokens } from "./format.js";
 import type { SegmentData, SegmentDefinition, SegmentRenderContext, SegmentRenderResult } from "./types.js";
 
 function configuredPriority(ctx: SegmentRenderContext, segment: SegmentDefinition): number {
@@ -27,17 +27,39 @@ function renderCollectedSegment(ctx: SegmentRenderContext, segment: SegmentDefin
 
 const SEGMENTS: SegmentDefinition[] = [
 	{
-		id: "git.branch",
-		label: "Git Branch",
+		id: "git",
+		label: "Git",
 		defaultPriority: 65,
 		collect(ctx) {
-			const branch = ctx.state.git.branch ? stripControls(ctx.state.git.branch) : "";
-			if (!branch) return undefined;
+			const git = ctx.state.git;
+			if (!git.repo) return undefined;
+			const branch = git.branch || (git.detached && git.sha ? git.sha : "HEAD");
+			const status = ctx.config.icons === "nerd" ? (git.status === "conflict" ? "⚠" : git.status === "dirty" ? "●" : "") : git.status === "conflict" ? "!" : git.status === "dirty" ? "*" : "";
+			const parts = [];
+			if (ctx.config.git.showDirty && status) parts.push(status);
+			if (ctx.config.git.showAheadBehind) {
+				if (git.ahead > 0) parts.push(`↑${git.ahead}`);
+				if (git.behind > 0) parts.push(`↓${git.behind}`);
+			}
+			const showSha = ctx.config.git.showSha === "always" || (ctx.config.git.showSha === "auto" && ctx.widthMode === "full");
+			if (showSha && git.sha) parts.push(git.sha);
+			const secondary = parts.join(" ") || undefined;
 			return {
 				primary: branch,
+				secondary,
+				display: {
+					full: [branch, secondary].filter(Boolean).join(" "),
+					compact: [branch, ...parts.filter((part) => part !== git.sha)].join(" "),
+					minimal: [branch, status].filter(Boolean).join(" "),
+				},
 				metadata: {
-					branch,
 					repo: true,
+					branch: git.branch,
+					detached: git.detached,
+					status: git.status,
+					ahead: git.ahead,
+					behind: git.behind,
+					sha: git.sha,
 				},
 			};
 		},

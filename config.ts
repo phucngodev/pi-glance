@@ -1,13 +1,13 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import type { GlanceConfig, GlanceThemeName, IconMode, SegmentConfig, SegmentId } from "./types.js";
+import type { GitShaMode, GlanceConfig, GlanceThemeName, IconMode, SegmentConfig, SegmentId } from "./types.js";
 
 const CONFIG_PATH = join(getAgentDir(), "pi-glance", "config.json");
 const CONFIG_VERSION = 2 as const;
 
 const DEFAULT_SEGMENTS: SegmentConfig[] = [
-	{ id: "git.branch", enabled: true, priority: 65 },
+	{ id: "git", enabled: true, priority: 65 },
 	{ id: "model", enabled: true, priority: 100 },
 	{ id: "context", enabled: true, priority: 95 },
 	{ id: "tokens", enabled: true, priority: 55 },
@@ -18,6 +18,7 @@ const SEGMENT_IDS = new Set<SegmentId>(DEFAULT_SEGMENTS.map((s) => s.id));
 const THEMES = new Set<GlanceThemeName>(["light", "dark"]);
 const ICON_MODES = new Set<IconMode>(["nerd", "plain"]);
 const PROVIDER_MODES = new Set<GlanceConfig["display"]["showProvider"]>(["auto", "always", "never"]);
+const SHA_MODES = new Set<GitShaMode>(["auto", "always", "never"]);
 
 export function defaultConfig(): GlanceConfig {
 	return {
@@ -36,6 +37,14 @@ export function defaultConfig(): GlanceConfig {
 		model: {
 			customNames: {},
 		},
+		git: {
+			showDirty: true,
+			showAheadBehind: true,
+			showSha: "auto",
+			timeoutMs: 1000,
+			refreshDebounceMs: 1500,
+			snapshotTtlMs: 30_000,
+		},
 	};
 }
 
@@ -46,6 +55,7 @@ export function cloneConfig(config: GlanceConfig): GlanceConfig {
 		display: { ...config.display },
 		segments: config.segments.map((s) => ({ ...s })),
 		model: { customNames: { ...config.model.customNames } },
+		git: { ...config.git },
 	};
 }
 
@@ -64,6 +74,11 @@ function parseIntInRange(value: unknown, fallback: number, min: number, max: num
 
 function parseFiniteNumber(value: unknown, fallback: number): number {
 	return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function parseIntAtLeast(value: unknown, fallback: number, min: number): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+	return Math.max(min, Math.floor(value));
 }
 
 function normalizeSegments(value: unknown): SegmentConfig[] {
@@ -88,6 +103,8 @@ function normalizeSegments(value: unknown): SegmentConfig[] {
 		}
 	}
 
+	if (!ordered.some((s) => s.id === "git")) return defaults;
+
 	for (const segment of defaults) {
 		if (!ordered.some((s) => s.id === segment.id)) ordered.push(byId.get(segment.id)!);
 	}
@@ -102,6 +119,7 @@ function normalizeConfig(raw: unknown): GlanceConfig {
 	const editor = record.editor && typeof record.editor === "object" ? (record.editor as Record<string, unknown>) : {};
 	const display = record.display && typeof record.display === "object" ? (record.display as Record<string, unknown>) : {};
 	const model = record.model && typeof record.model === "object" ? (record.model as Record<string, unknown>) : {};
+	const git = record.git && typeof record.git === "object" ? (record.git as Record<string, unknown>) : {};
 
 	return {
 		version: CONFIG_VERSION,
@@ -125,6 +143,14 @@ function normalizeConfig(raw: unknown): GlanceConfig {
 							),
 						) as Record<string, string>)
 					: {},
+		},
+		git: {
+			showDirty: parseBool(git.showDirty, defaults.git.showDirty),
+			showAheadBehind: parseBool(git.showAheadBehind, defaults.git.showAheadBehind),
+			showSha: parseStringEnum(git.showSha, SHA_MODES, defaults.git.showSha),
+			timeoutMs: parseIntAtLeast(git.timeoutMs, defaults.git.timeoutMs, 100),
+			refreshDebounceMs: parseIntAtLeast(git.refreshDebounceMs, defaults.git.refreshDebounceMs, 0),
+			snapshotTtlMs: parseIntAtLeast(git.snapshotTtlMs, defaults.git.snapshotTtlMs, 1000),
 		},
 	};
 }

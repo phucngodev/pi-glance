@@ -1,7 +1,9 @@
-export type SegmentId = "git.branch" | "model" | "context" | "tokens" | "cost";
+export type SegmentId = "git" | "model" | "context" | "tokens" | "cost";
 export type GlanceThemeName = "light" | "dark";
 export type IconMode = "nerd" | "plain";
 export type WidthMode = "full" | "compact" | "minimal";
+export type GitStatus = "clean" | "dirty" | "conflict" | "unknown";
+export type GitShaMode = "auto" | "always" | "never";
 type SegmentMetadataValue = string | number | boolean | null;
 type SegmentMetadata = Record<string, SegmentMetadataValue>;
 
@@ -20,6 +22,15 @@ interface EditorConfig {
 	minContentRows: number;
 }
 
+export interface GitConfig {
+	showDirty: boolean;
+	showAheadBehind: boolean;
+	showSha: GitShaMode;
+	timeoutMs: number;
+	refreshDebounceMs: number;
+	snapshotTtlMs: number;
+}
+
 export interface GlanceConfig {
 	version: 2;
 	enabled: boolean;
@@ -31,6 +42,7 @@ export interface GlanceConfig {
 	model: {
 		customNames: Record<string, string>;
 	};
+	git: GitConfig;
 }
 
 export interface UsageTotals {
@@ -41,14 +53,29 @@ export interface UsageTotals {
 	cost: number;
 }
 
+export interface GitSnapshot {
+	repo: boolean;
+	branch: string | null;
+	detached: boolean;
+	sha: string | null;
+	upstream: string | null;
+	ahead: number;
+	behind: number;
+	staged: number;
+	unstaged: number;
+	untracked: number;
+	conflicts: number;
+	dirty: boolean;
+	status: GitStatus;
+	updatedAt: number;
+}
+
 export interface GlanceState {
 	workspace: {
 		name: string;
 		path: string;
 	};
-	git: {
-		branch: string | null;
-	};
+	git: GitSnapshot;
 	providers: {
 		availableCount: number;
 	};

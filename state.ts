@@ -1,7 +1,8 @@
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { displayDirectory, shortenModel } from "./format.js";
-import type { GlanceConfig, GlanceState, UsageTotals } from "./types.js";
+import { emptyGitSnapshot } from "./git.js";
+import type { GitSnapshot, GlanceConfig, GlanceState, UsageTotals } from "./types.js";
 
 export function createInitialState(ctx: ExtensionContext, config: GlanceConfig, thinkingLevel: string): GlanceState {
 	const cwd = ctx.sessionManager.getCwd?.() || ctx.cwd;
@@ -10,9 +11,7 @@ export function createInitialState(ctx: ExtensionContext, config: GlanceConfig, 
 			name: displayDirectory(cwd),
 			path: cwd,
 		},
-		git: {
-			branch: null,
-		},
+		git: emptyGitSnapshot(),
 		providers: {
 			availableCount: 1,
 		},
@@ -87,6 +86,36 @@ export function refreshWorkspace(state: GlanceState, ctx: ExtensionContext): boo
 		name: displayDirectory(cwd),
 		path: cwd,
 	};
+	state.git = emptyGitSnapshot();
+	touch(state);
+	return true;
+}
+
+function gitSnapshotsEqual(a: GitSnapshot, b: GitSnapshot): boolean {
+	return (
+		a.repo === b.repo &&
+		a.branch === b.branch &&
+		a.detached === b.detached &&
+		a.sha === b.sha &&
+		a.upstream === b.upstream &&
+		a.ahead === b.ahead &&
+		a.behind === b.behind &&
+		a.staged === b.staged &&
+		a.unstaged === b.unstaged &&
+		a.untracked === b.untracked &&
+		a.conflicts === b.conflicts &&
+		a.dirty === b.dirty &&
+		a.status === b.status
+	);
+}
+
+export function setGitSnapshot(state: GlanceState, cwd: string, snapshot: GitSnapshot): boolean {
+	if (state.workspace.path !== cwd) return false;
+	if (gitSnapshotsEqual(state.git, snapshot)) {
+		state.git.updatedAt = snapshot.updatedAt;
+		return false;
+	}
+	state.git = snapshot;
 	touch(state);
 	return true;
 }
