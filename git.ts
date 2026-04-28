@@ -2,6 +2,8 @@ import { execFile } from "node:child_process";
 import type { GitConfig, GitSnapshot, GitStatus } from "./types.js";
 
 const GIT_ARGS = ["--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash"] as const;
+const MAX_POLL_INTERVAL_MS = 5000;
+const MIN_POLL_INTERVAL_MS = 2000;
 
 export function emptyGitSnapshot(status: GitStatus = "unknown"): GitSnapshot {
 	return {
@@ -123,6 +125,7 @@ function collectGitSnapshot(cwd: string, config: GitConfig): Promise<GitSnapshot
 
 export class GitRefresher {
 	private timer: NodeJS.Timeout | undefined;
+	private pollTimer: NodeJS.Timeout | undefined;
 	private inFlight = false;
 	private pending = false;
 	private disposed = false;
@@ -136,18 +139,33 @@ export class GitRefresher {
 	dispose(): void {
 		this.disposed = true;
 		if (this.timer) clearTimeout(this.timer);
+		if (this.pollTimer) clearTimeout(this.pollTimer);
 		this.timer = undefined;
+		this.pollTimer = undefined;
 	}
 
 	schedule(immediate = false): void {
 		if (this.disposed) return;
 		if (this.timer) clearTimeout(this.timer);
+		if (this.pollTimer) clearTimeout(this.pollTimer);
+		this.pollTimer = undefined;
 		const delay = immediate ? 0 : this.getConfig().refreshDebounceMs;
 		this.timer = setTimeout(() => {
 			this.timer = undefined;
 			void this.refresh();
 		}, delay);
 		this.timer.unref?.();
+	}
+
+	private schedulePoll(snapshot: GitSnapshot): void {
+		if (this.disposed || !snapshot.repo) return;
+		if (this.pollTimer) clearTimeout(this.pollTimer);
+		const delay = Math.max(MIN_POLL_INTERVAL_MS, Math.min(this.getConfig().snapshotTtlMs, MAX_POLL_INTERVAL_MS));
+		this.pollTimer = setTimeout(() => {
+			this.pollTimer = undefined;
+			void this.refresh();
+		}, delay);
+		this.pollTimer.unref?.();
 	}
 
 	private async refresh(): Promise<void> {
@@ -158,15 +176,18 @@ export class GitRefresher {
 		}
 		const cwd = this.getCwd();
 		if (!cwd) return;
+		let snapshot: GitSnapshot | undefined;
 		this.inFlight = true;
 		try {
-			const snapshot = await collectGitSnapshot(cwd, this.getConfig());
+			snapshot = await collectGitSnapshot(cwd, this.getConfig());
 			if (!this.disposed) this.onSnapshot(cwd, snapshot);
 		} finally {
 			this.inFlight = false;
 			if (this.pending && !this.disposed) {
 				this.pending = false;
 				this.schedule(true);
+			} else if (snapshot && !this.disposed) {
+				this.schedulePoll(snapshot);
 			}
 		}
 	}
