@@ -1,12 +1,13 @@
-import { collectGitSnapshot } from "../git.js";
-import type { GitConfig } from "../types.js";
+import { collectGitSnapshot } from "../git.ts";
+import type { GitConfig } from "../types.ts";
 
 const config: GitConfig = {
-	showDirty: true,
-	showAheadBehind: true,
-	timeoutMs: 1000,
-	refreshDebounceMs: 0,
-	pollIntervalMs: 5000,
+  showDirty: true,
+  showAheadBehind: true,
+  shaMode: "off",
+  timeoutMs: 1000,
+  refreshDebounceMs: 0,
+  pollIntervalMs: 5000,
 };
 
 const cwd = process.argv[2] || process.cwd();
