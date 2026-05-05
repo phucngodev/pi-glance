@@ -72,9 +72,7 @@ function joinSegments(palette: GlancePalette, segments: SegmentRenderResult[]): 
 function fitSegments(palette: GlancePalette, segments: SegmentRenderResult[], width: number): SegmentRenderResult[] {
 	const fitted = [...segments];
 	while (fitted.length > 1 && visibleWidth(joinSegments(palette, fitted)) > width) {
-		const lowestPriority = Math.min(...fitted.map((segment) => segment.priority));
-		const removeIndex = fitted.findIndex((segment) => segment.priority === lowestPriority);
-		fitted.splice(removeIndex, 1);
+		fitted.pop();
 	}
 	return fitted;
 }

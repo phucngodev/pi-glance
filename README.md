@@ -37,6 +37,13 @@ For development/testing:
 pi -e /path/to/pi-glance
 ```
 
+Local Git diagnostics:
+
+```bash
+npm run test:git
+npm run debug:git
+```
+
 ## Use
 
 ```text
@@ -64,6 +71,23 @@ That's the only command — opens a configuration pane to tweak theme, icons, se
 
 - Icons default to `plain` so pi-glance works with normal terminal fonts.
 - If you use a Nerd Font, open `/glance` and set `Icons` to `nerd` for richer symbols.
+
+## Git status
+
+The Git segment is intentionally quiet:
+
+- Clean repositories show only the branch name.
+- Dirty repositories add `*` in plain mode or `●` in Nerd Font mode.
+- Conflicts add `!` in plain mode or `⚠` in Nerd Font mode.
+- Ahead/behind counts appear when Git reports an upstream, for example `↑2 ↓1`.
+- Non-Git directories hide the Git segment.
+
+Git is collected asynchronously and cached. External file changes usually appear within a few seconds. For local development/debugging you can compare pi-glance with Git directly:
+
+```bash
+git status --short --branch
+npm run debug:git
+```
 
 ## Design
 

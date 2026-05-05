@@ -1,11 +1,6 @@
 import { formatCost, formatPercent, formatTokens } from "./format.js";
 import type { SegmentData, SegmentDefinition, SegmentRenderContext, SegmentRenderResult } from "./types.js";
 
-function configuredPriority(ctx: SegmentRenderContext, segment: SegmentDefinition): number {
-	const config = ctx.config.segments.find((s) => s.id === segment.id);
-	return config?.priority ?? segment.defaultPriority;
-}
-
 function displayForMode(data: SegmentData, widthMode: SegmentRenderContext["widthMode"]): string {
 	if (widthMode === "minimal" && data.display?.minimal !== undefined) return data.display.minimal;
 	if (widthMode === "compact" && data.display?.compact !== undefined) return data.display.compact;
@@ -21,7 +16,6 @@ function renderCollectedSegment(ctx: SegmentRenderContext, segment: SegmentDefin
 	return {
 		id: segment.id,
 		text: `${prefix}${value}`.trim(),
-		priority: configuredPriority(ctx, segment),
 	};
 }
 
@@ -53,7 +47,6 @@ const SEGMENTS: SegmentDefinition[] = [
 	{
 		id: "git",
 		label: "Git",
-		defaultPriority: 65,
 		collect(ctx) {
 			const git = ctx.state.git;
 			if (!git.repo) return undefined;
@@ -68,22 +61,12 @@ const SEGMENTS: SegmentDefinition[] = [
 					compact: [branch, secondary].filter(Boolean).join(" "),
 					minimal: [branch, gitStatusMark(ctx)].filter(Boolean).join(" "),
 				},
-				metadata: {
-					repo: true,
-					branch: git.branch,
-					detached: git.detached,
-					status: git.status,
-					ahead: git.ahead,
-					behind: git.behind,
-					sha: git.sha,
-				},
 			};
 		},
 	},
 	{
 		id: "model",
 		label: "Model",
-		defaultPriority: 100,
 		collect(ctx) {
 			let model = ctx.state.model.displayName || ctx.state.model.id || "no-model";
 			if (ctx.showProvider && ctx.state.model.provider && ctx.widthMode === "full") {
@@ -98,19 +81,12 @@ const SEGMENTS: SegmentDefinition[] = [
 					compact: thinking ? `${model} ${thinking}` : model,
 					minimal: model,
 				},
-				metadata: {
-					id: ctx.state.model.id ?? null,
-					provider: ctx.state.model.provider ?? null,
-					displayName: ctx.state.model.displayName ?? null,
-					thinking: ctx.state.model.thinking || null,
-				},
 			};
 		},
 	},
 	{
 		id: "context",
 		label: "Context",
-		defaultPriority: 95,
 		collect(ctx) {
 			const pct = formatPercent(ctx.state.context.percent);
 			const tokens = formatTokens(ctx.state.context.tokens);
@@ -123,19 +99,12 @@ const SEGMENTS: SegmentDefinition[] = [
 					compact: pct,
 					minimal: pct,
 				},
-				metadata: {
-					known: ctx.state.context.percent !== null && ctx.state.context.tokens !== null,
-					percent: ctx.state.context.percent,
-					tokens: ctx.state.context.tokens,
-					window: ctx.state.context.window,
-				},
 			};
 		},
 	},
 	{
 		id: "tokens",
 		label: "Tokens",
-		defaultPriority: 55,
 		collect(ctx) {
 			const usage = ctx.state.usage;
 			const primary = `↑${formatTokens(usage.input)} ↓${formatTokens(usage.output)}`;
@@ -150,26 +119,15 @@ const SEGMENTS: SegmentDefinition[] = [
 					compact: primary,
 					minimal: primary,
 				},
-				metadata: {
-					input: usage.input,
-					output: usage.output,
-					cacheRead: usage.cacheRead,
-					cacheWrite: usage.cacheWrite,
-					total: usage.input + usage.output + usage.cacheRead + usage.cacheWrite,
-				},
 			};
 		},
 	},
 	{
 		id: "cost",
 		label: "Cost",
-		defaultPriority: 35,
 		collect(ctx) {
 			return {
 				primary: formatCost(ctx.state.usage.cost),
-				metadata: {
-					usd: ctx.state.usage.cost,
-				},
 			};
 		},
 	},

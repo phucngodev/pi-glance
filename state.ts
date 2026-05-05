@@ -5,7 +5,7 @@ import { emptyGitSnapshot } from "./git.js";
 import type { GitSnapshot, GlanceConfig, GlanceState, UsageTotals } from "./types.js";
 
 export function createInitialState(ctx: ExtensionContext, config: GlanceConfig, thinkingLevel: string): GlanceState {
-	const cwd = ctx.sessionManager.getCwd?.() || ctx.cwd;
+	const cwd = ctx.sessionManager.getCwd() || ctx.cwd;
 	const state: GlanceState = {
 		workspace: {
 			name: displayDirectory(cwd),
@@ -80,7 +80,7 @@ export function clearContextUsage(state: GlanceState, ctx?: ExtensionContext): b
 }
 
 export function refreshWorkspace(state: GlanceState, ctx: ExtensionContext): boolean {
-	const cwd = ctx.sessionManager.getCwd?.() || ctx.cwd;
+	const cwd = ctx.sessionManager.getCwd() || ctx.cwd;
 	if (state.workspace.path === cwd) return false;
 	state.workspace = {
 		name: displayDirectory(cwd),

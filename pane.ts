@@ -225,7 +225,7 @@ class GlanceConfigPane implements Component {
 		const contentWidth = Math.max(20, width - 4);
 		const globalHeader = this.focus === "global" ? colors.accent("GLOBAL SETTINGS") : colors.dim("GLOBAL SETTINGS");
 		const segmentHeader = this.focus === "segments" ? colors.accent("STATUS SEGMENTS") : colors.dim("STATUS SEGMENTS");
-		const segmentHint = this.focus === "segments" ? colors.muted(" priority order") : colors.dim(" priority order");
+		const segmentHint = this.focus === "segments" ? colors.muted(" display order") : colors.dim(" display order");
 		const globalRows = this.renderGlobalRows(colors);
 		const segmentRows = this.renderSegmentRows(colors);
 

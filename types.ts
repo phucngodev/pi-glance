@@ -3,13 +3,10 @@ export type GlanceThemeName = "light" | "dark";
 export type IconMode = "nerd" | "plain";
 export type WidthMode = "full" | "compact" | "minimal";
 export type GitStatus = "clean" | "dirty" | "conflict" | "unknown";
-type SegmentMetadataValue = string | number | boolean | null;
-type SegmentMetadata = Record<string, SegmentMetadataValue>;
 
 export interface SegmentConfig {
 	id: SegmentId;
 	enabled: boolean;
-	priority: number;
 }
 
 interface DisplayConfig {
@@ -125,7 +122,6 @@ interface SegmentDisplay {
 export interface SegmentData {
 	primary: string;
 	secondary?: string;
-	metadata?: SegmentMetadata;
 	display?: SegmentDisplay;
 }
 
@@ -140,12 +136,10 @@ export interface SegmentRenderContext {
 export interface SegmentRenderResult {
 	id: SegmentId;
 	text: string;
-	priority: number;
 }
 
 export interface SegmentDefinition {
 	id: SegmentId;
 	label: string;
-	defaultPriority: number;
 	collect(ctx: SegmentRenderContext): SegmentData | undefined;
 }

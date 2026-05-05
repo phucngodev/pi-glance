@@ -21,6 +21,7 @@ docs/
 dist/
 build/
 coverage/
+.tmp-git-dev/
 
 # Temporary files
 /tmp/
