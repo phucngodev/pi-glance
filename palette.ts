@@ -8,7 +8,7 @@ export const PALETTES: Record<GlanceThemeName, GlancePalette> = {
     warn: { r: 217, g: 119, b: 6 },
     error: { r: 225, g: 29, b: 72 },
     separator: { r: 148, g: 163, b: 184 },
-    border: { r: 72, g: 94, b: 84 },
+    border: { r: 221, g: 235, b: 231 },
     title: { r: 47, g: 104, b: 74 },
     segments: {
       git: { fg: { r: 35, g: 118, b: 85 } },
